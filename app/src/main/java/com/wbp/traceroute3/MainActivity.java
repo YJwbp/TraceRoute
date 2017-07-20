@@ -1,9 +1,8 @@
 package com.wbp.traceroute3;
 
 import android.os.AsyncTask;
-import android.os.Process;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -12,6 +11,9 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -19,6 +21,12 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+
+import rx.Observable;
+import rx.Subscriber;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
+import rx.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
     // 输入网址框
@@ -87,9 +95,40 @@ public class MainActivity extends AppCompatActivity {
 //                    e.printStackTrace();
 //                }
 
+                final String TAG ="rxjava";
+                Observable.create(new Observable.OnSubscribe<String>() {
+                    @Override
+                    public void call(Subscriber<? super String> subscriber) {
+                        try {
+                            Document document = Jsoup.connect("http://ip.cn/index.php").data("ip", "202.106.48.9").get();
+                            String title = document.title();
+                            String location = document.getElementsByTag("code").last().text();// 北京市 联通
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }).subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Subscriber<Object>() {
+                            @Override
+                            public void onCompleted() {
+                                Log.d(TAG, "onCompleted: ");
+                            }
 
-                new ExecuteTracerouteAsyncTask(MAX_TTL, et.getText().toString())
-                        .execute();
+                            @Override
+                            public void onError(Throwable e) {
+                                Log.d(TAG, "onError: "+e);
+                            }
+
+                            @Override
+                            public void onNext(Object o) {
+                                Log.d(TAG, "onNext: "+o);
+                            }
+                        });
+
+
+//                new ExecuteTracerouteAsyncTask(MAX_TTL, et.getText().toString())
+//                        .execute();
             }
         });
     }
