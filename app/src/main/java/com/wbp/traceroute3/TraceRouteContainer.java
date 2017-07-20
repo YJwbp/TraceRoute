@@ -4,13 +4,16 @@ package com.wbp.traceroute3;
  * Created by wbp on 2017/7/19.
  */
 
-public class TracerouteContainer {
+public class TraceRouteContainer {
     private String ip;
     private String hostName;
     private float ttl;
     private String pingContent;
 
-    public TracerouteContainer(String hostName, String ip, float ttl) {
+    public TraceRouteContainer() {
+    }
+
+    public TraceRouteContainer(String hostName, String ip, float ttl) {
         this.ip = ip;
         this.hostName = hostName;
         this.ttl = ttl;
@@ -50,7 +53,7 @@ public class TracerouteContainer {
 
     @Override
     public String toString() {
-        return "TracerouteContainer{" +
+        return "TraceRouteContainer{" +
                 "ip='" + ip + '\'' +
                 ", hostName='" + hostName + '\'' +
                 ", ttl=" + ttl +
