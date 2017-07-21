@@ -5,7 +5,6 @@ import android.util.Log;
 
 import com.wbp.traceroute3.event.TTLInfoEvent;
 import com.wbp.traceroute3.event.TraceCompleteEvent;
-import com.wbp.traceroute3.event.TraceInfoEvent;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -13,7 +12,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,10 +34,13 @@ public enum TraceHandler {
     INSTANCE;
 
     private static final String TAG = "TraceHandler";
-    private String destIP = "";
+    private Set<String> destIps = new HashSet<>();
     private String traceUrl = "www.baidu.com";
     private int pingRepeatTimes = 1;
-    // 最大的ttl跳转 可以自己设定
+
+    /**
+     * 最大的ttl跳转 可以自己设定
+     */
     private static final int MAX_TTL = 30;
 
     protected CompositeSubscription compositeSubscription;
@@ -83,13 +87,13 @@ public enum TraceHandler {
                 }));
     }
 
-    private void prepareInfo() {
-        String res = ping("ping -c 1 -W 10 " + traceUrl);
+    private String prepareInfo() {
+        String res = ping("ping -c 1 -W 1 " + traceUrl);
         String subRes = res.substring(0, res.indexOf("\n"));
         if (subRes.contains("PING")) {
-            destIP = parseDestIPFromPingResult(subRes);
-            EventBus.getDefault().post(new TraceInfoEvent(subRes.replace("PING", "TraceRoute")));
+            return parseDestIPFromPingResult(subRes);
         }
+        return "";
     }
 
     private void checkTraceOver(TTLInfo info) {
@@ -98,8 +102,11 @@ public enum TraceHandler {
             sb.append(pingInfo.getIp());
         }
 
-        if (!TextUtils.isEmpty(destIP) && sb.toString().contains(destIP)) {
-            stopTrace();
+        for (String ip : destIps) {
+            if (sb.toString().contains(ip)) {
+                stopTrace();
+                break;
+            }
         }
     }
 
@@ -125,9 +132,9 @@ public enum TraceHandler {
      * @return
      */
     private TTLInfo doTTL(int ttl) {
-        if (ttl == 1) {
-            prepareInfo();
-        }
+//        if (ttl == 1) {
+//            prepareInfo();
+//        }
         TTLInfo ttlInfo = new TTLInfo();
         ttlInfo.setTtl(ttl);
 
@@ -156,11 +163,27 @@ public enum TraceHandler {
 
         String pingResult = ping(command + traceUrl);
 
+        updateDestIPs(pingResult);
         String ip = parseNodeIPFromPingResult(pingResult);
+//        pingInfo.setFirstLine(parseFirstLine(pingResult));
         pingInfo.setIp(ip);
         pingInfo.setTime(parseTimeFromPingResult(ping("ping -c 1 -W 10 " + ip)));
         pingInfo.loadGeoByIP();
         return pingInfo;
+    }
+
+    private void updateDestIPs(String pingResult) {
+        String destIP = parseDestIPFromPingResult(pingResult);
+        if (!TextUtils.isEmpty(destIP)) {
+            destIps.add(destIP);
+        }
+    }
+
+    private String parseFirstLine(String res) {
+        if (TextUtils.isEmpty(res)) return "";
+        int index = res.indexOf("\n");
+        if (index <= 0) return "";
+        return res.substring(0, index);
     }
 
     private String ping(String command) {
@@ -198,7 +221,7 @@ public enum TraceHandler {
 
     //  解析目的IP,判断跟踪结束
     // host获取——伪需求
-    // TODO: 2017/7/21 时间获取
+    //  时间获取
     // 开始信息
 
     /**
