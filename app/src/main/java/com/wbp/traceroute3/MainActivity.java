@@ -67,6 +67,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void startTrace() {
         progressBar.setVisibility(View.VISIBLE);
+        ttlAdapter.getDatas().clear();
+        ttlAdapter.notifyDataSetChanged();
+        Toast.makeText(this, "Start!", Toast.LENGTH_SHORT).show();
         TraceHandler.INSTANCE.url(etDomainName.getText().toString()).startTrace();
     }
 
