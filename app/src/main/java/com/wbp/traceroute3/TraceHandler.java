@@ -2,6 +2,11 @@ package com.wbp.traceroute3;
 
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Toast;
+
+import com.wbp.traceroute3.event.TTLInfoEvent;
+
+import org.greenrobot.eventbus.EventBus;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -44,7 +49,7 @@ public enum TraceHandler {
     public void startTrace() {
         List<Integer> ttls = new ArrayList<>();
         for (int i = 0; i < MAX_TTL; i++) {
-            ttls.set(i, i + 1);
+            ttls.add(i, i + 1);
         }
 
         addSubscription(Observable.from(ttls)
@@ -70,8 +75,7 @@ public enum TraceHandler {
                     @Override
                     public void onNext(TTLInfo ttlInfo) {
                         Log.d(TAG, "onNext: " + ttlInfo);
-
-
+                        EventBus.getDefault().post(new TTLInfoEvent(ttlInfo));
                     }
                 }));
     }
@@ -128,7 +132,7 @@ public enum TraceHandler {
         // 1、执行ping命令,得到返回字符串
         // 这个实际上就是我们的命令第一封装 注意ttl的值的变化 第一次调用的时候 ttl的值为1
         // -c表示ping执行次数; -t 超时; -m ttl
-        String format = "ping -c 1 -t 1000 -m %d ";
+        String format = "ping -c 1 -t %d ";
         String command = String.format(format, ttl);
 
         long startTime = System.nanoTime();
@@ -142,6 +146,9 @@ public enum TraceHandler {
         if ((len = p.getErrorStream().available()) > 0) {
             byte[] buf = new byte[len];
             p.getErrorStream().read(buf);
+            Utils.log("\"Command error ttl:\\t\\\"\" + ttl + new String(buf) + \"\\\"\"");
+            Utils.log("Command error " + new String(buf));
+            Log.d(TAG, "ping: " + "Command error " + new String(buf));
             System.err.println("Command error ttl:\t\"" + ttl + new String(buf) + "\"");
         }
 
@@ -177,7 +184,7 @@ public enum TraceHandler {
      * @return
      */
     private String parsePingResult(String result) {
-        result = "sdfsdf 20.123.20.33: sfs";
+//        result = "sdfsdf 20.123.20.33: sfs";
         String regex = "\\b\\d+.\\d+.\\d+.\\d+\\b";
         Pattern p = Pattern.compile(regex);
 

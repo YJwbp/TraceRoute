@@ -50,6 +50,15 @@ public class PingInfo {
         this.geo = geo;
     }
 
+    @Override
+    public String toString() {
+        return "PingInfo{" +
+                "ip='" + ip + '\'' +
+                ", time='" + time + '\'' +
+                ", geo='" + geo + '\'' +
+                '}';
+    }
+
     public void loadGeoByIP() {
         if (TextUtils.isEmpty(ip)) {
             this.geo = "";
