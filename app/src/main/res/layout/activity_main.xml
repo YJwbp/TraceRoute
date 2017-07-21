@@ -59,17 +59,10 @@
             android:layout_marginLeft="10dp" />
     </LinearLayout>
 
-    <ScrollView
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/recyclerView"
+        android:background="@color/c3"
         android:layout_width="match_parent"
-        android:layout_height="fill_parent">
-
-        <TextView
-            android:id="@+id/text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:textColor="@android:color/black"
-            android:textSize="12sp" />
-    </ScrollView>
+        android:layout_height="match_parent" />
 
 </LinearLayout>

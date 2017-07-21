@@ -15,8 +15,17 @@ public class PingInfo {
     private String ip;
     private String time;
     private String geo;
+    private String host;
 
     private String firstLine;
+
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
 
     public String getFirstLine() {
         return firstLine;
