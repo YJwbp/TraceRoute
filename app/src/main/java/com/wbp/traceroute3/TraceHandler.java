@@ -2,7 +2,6 @@ package com.wbp.traceroute3;
 
 import android.text.TextUtils;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.wbp.traceroute3.event.TTLInfoEvent;
 import com.wbp.traceroute3.event.TraceCompleteEvent;
@@ -83,11 +82,18 @@ public enum TraceHandler {
                 }));
     }
 
+    private void prepareInfo() {
+        String res = ping("ping -c 1 " + traceUrl);
+        String subRes = res.substring(0, res.indexOf("\n"));
+        if (subRes.contains("PING")) {
+            destIP = parseDestIPFromPingResult(subRes);
+            EventBus.getDefault().post(new TraceInfoEvent(subRes.replace("PING", "TraceRoute")));
+        }
+    }
 
     private void checkTraceOver(TTLInfo info) {
         StringBuilder sb = new StringBuilder("Check");
-        for (PingInfo pingInfo :
-                info.getPingInfoList()) {
+        for (PingInfo pingInfo : info.getPingInfoList()) {
             sb.append(pingInfo.getIp());
         }
 
@@ -118,19 +124,15 @@ public enum TraceHandler {
      * @return
      */
     private TTLInfo doTTL(int ttl) {
+        if (ttl == 1) {
+            prepareInfo();
+        }
         TTLInfo ttlInfo = new TTLInfo();
         ttlInfo.setTtl(ttl);
 
         List<PingInfo> infos = new ArrayList<>();
         for (int i = 0; i < pingRepeatTimes; i++) {
-            PingInfo info;
-            try {
-                info = ping(ttl);
-            } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
-                info = new PingInfo();
-            }
-            infos.add(info);
+            infos.add(ping(ttl));
         }
         ttlInfo.setPingInfoList(infos);
         return ttlInfo;
@@ -142,7 +144,7 @@ public enum TraceHandler {
      *
      * @param ttl
      */
-    private PingInfo ping(int ttl) throws IOException, InterruptedException {
+    private PingInfo ping(int ttl) {
         PingInfo pingInfo = new PingInfo();
 
         // 1、执行ping命令,得到返回字符串
@@ -151,47 +153,47 @@ public enum TraceHandler {
         String format = "ping -c 1 -t %d ";
         String command = String.format(format, ttl);
 
-        long startTime = System.nanoTime();
-        Process p = Runtime.getRuntime().exec(command + traceUrl);
-        p.waitFor();
-        long endTime = System.nanoTime();
-        pingInfo.setTime((endTime - startTime) / 1000000.0f + "ms");
+        String pingResult = ping(command + traceUrl);
 
-        // 调试信息
-        int len;
-        if ((len = p.getErrorStream().available()) > 0) {
-            byte[] buf = new byte[len];
-            p.getErrorStream().read(buf);
-            Utils.log("Command error " + new String(buf));
-        }
-
-        BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
-        String s;
-        StringBuilder sbResult = new StringBuilder();
-        while ((s = stdInput.readLine()) != null) {
-            if (s.contains("PING")) {
-                destIP = parsePingResult(s);
-                EventBus.getDefault().post(new TraceInfoEvent(s.replace("PING", "TraceRoute")));
-                pingInfo.setFirstLine(s);
-                continue;
-            }
-            sbResult.append(s);
-        }
-
-        // 调用结束的时候 销毁这个资源
-        p.destroy();
-
-        if (TextUtils.isEmpty(sbResult.toString())) {
-            Log.d(TAG, "ping: sbResult == null");
-        }
-
-        String ip = parsePingResult(sbResult.toString());
+        String ip = parseNodeIPFromPingResult(pingResult);
         pingInfo.setIp(ip);
-
+        pingInfo.setTime(parseTimeFromPingResult(ping("ping -c 1 " + ip)));
         pingInfo.loadGeoByIP();
         return pingInfo;
     }
 
+    private String ping(String command) {
+        try {
+            Process p = Runtime.getRuntime().exec(command);
+            p.waitFor();
+
+            // 调试信息
+            int len;
+            if ((len = p.getErrorStream().available()) > 0) {
+                byte[] buf = new byte[len];
+                p.getErrorStream().read(buf);
+                Utils.log("Command error " + new String(buf));
+            }
+
+            BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            String s;
+            StringBuilder sbResult = new StringBuilder();
+            while ((s = stdInput.readLine()) != null) {
+                sbResult.append(s).append("\n");
+            }
+
+            // 调用结束的时候 销毁这个资源
+            p.destroy();
+
+            if (TextUtils.isEmpty(sbResult.toString())) {
+                Log.d(TAG, "ping: sbResult == null");
+            }
+            return sbResult.toString();
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
 
     //  解析目的IP,判断跟踪结束
     // host获取——伪需求
@@ -199,22 +201,18 @@ public enum TraceHandler {
     // 开始信息
 
     /**
-     * 从ping的结果中提取末端节点ip地址
+     * 从ping的结果中提取目的节点ip地址
      *
      * @param result
      * @return
      */
-    private String parsePingResult(String result) {
-//        result = "sdfsdf 20.123.20.33: sfs";
+    private String parseDestIPFromPingResult(String result) {
         String regex = "\\b\\d+.\\d+.\\d+.\\d+\\b";
         Pattern p = Pattern.compile(regex);
 
         //2, 通过正则对象获取匹配器对象。
         Matcher matcher = p.matcher(result);
         if (matcher.find()) {
-            System.out.println(matcher.group());
-            System.out.println(matcher.start());
-            System.out.println(matcher.end());
             return matcher.group();
         }
 
@@ -222,6 +220,38 @@ public enum TraceHandler {
         // 2.1 得到节点IP: 36 bytes from 10.2.151.252: Time to live exceeded  >>> IP转地理位置 >> 显示
         // 2.2 超时: 只有 Request timeout for icmp_seq 5  >> 显示 ***
         // 2.3 访问到了终点: 64 bytes from 61.135.169.121: icmp_seq=0 ttl=56 time=2.230 ms  >> 结束
+        return "";
+    }
+
+    /**
+     * 从ping的结果中提取ttl节点ip地址
+     *
+     * @param result
+     * @return
+     */
+    private String parseNodeIPFromPingResult(String result) {
+        String subResult = result.substring(result.indexOf("\n"));
+        String regex = "\\b\\d+.\\d+.\\d+.\\d+\\b";
+        Pattern p = Pattern.compile(regex);
+
+        //2, 通过正则对象获取匹配器对象。
+        Matcher matcher = p.matcher(subResult);
+        if (matcher.find()) {
+            return matcher.group();
+        }
+
+        return "";
+    }
+
+    private String parseTimeFromPingResult(String result) {
+        String regex = "\\b\\d+.\\d+\\s*ms\\b";
+        Pattern p = Pattern.compile(regex);
+
+        //2, 通过正则对象获取匹配器对象。
+        Matcher matcher = p.matcher(result);
+        if (matcher.find()) {
+            return matcher.group();
+        }
         return "";
     }
 }
