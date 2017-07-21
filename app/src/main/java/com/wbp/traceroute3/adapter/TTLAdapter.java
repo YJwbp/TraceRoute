@@ -32,8 +32,6 @@ public class TTLAdapter extends CommonAdapter<TTLInfo> {
         TextView tvNode;
         @BindView(R.id.tv_ip)
         TextView tvIP;
-        @BindView(R.id.tv_host)
-        TextView tvHost;
         @BindView(R.id.tv_geo)
         TextView tvGeo;
         @BindView(R.id.tv_time)
@@ -56,7 +54,6 @@ public class TTLAdapter extends CommonAdapter<TTLInfo> {
             tvNode.setText(String.valueOf(info.getTtl()));
             tvNode.setSelected(TextUtils.isEmpty(pingInfo.getIp()));
             tvIP.setText(pingInfo.getIp());
-            tvHost.setText(pingInfo.getHost());
             tvGeo.setText(pingInfo.getGeo());
             tvTime.setText(pingInfo.getTime());
         }

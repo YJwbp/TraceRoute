@@ -187,15 +187,16 @@ public enum TraceHandler {
 
         String ip = parsePingResult(sbResult.toString());
         pingInfo.setIp(ip);
+
         pingInfo.loadGeoByIP();
         return pingInfo;
     }
 
 
     //  解析目的IP,判断跟踪结束
-    // TODO: 2017/7/21 host获取
+    // host获取——伪需求
     // TODO: 2017/7/21 时间获取
-    // TODO: 2017/7/21 开始信息
+    // 开始信息
 
     /**
      * 从ping的结果中提取末端节点ip地址
