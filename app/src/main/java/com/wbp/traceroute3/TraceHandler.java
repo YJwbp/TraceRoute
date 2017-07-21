@@ -6,6 +6,7 @@ import android.widget.Toast;
 
 import com.wbp.traceroute3.event.TTLInfoEvent;
 import com.wbp.traceroute3.event.TraceCompleteEvent;
+import com.wbp.traceroute3.event.TraceInfoEvent;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -170,6 +171,7 @@ public enum TraceHandler {
         while ((s = stdInput.readLine()) != null) {
             if (s.contains("PING")) {
                 destIP = parsePingResult(s);
+                EventBus.getDefault().post(new TraceInfoEvent(s.replace("PING", "TraceRoute")));
                 pingInfo.setFirstLine(s);
                 continue;
             }
@@ -190,9 +192,10 @@ public enum TraceHandler {
     }
 
 
-    // TODO: 2017/7/21 解析目的IP,判断跟踪结束
+    //  解析目的IP,判断跟踪结束
     // TODO: 2017/7/21 host获取
     // TODO: 2017/7/21 时间获取
+    // TODO: 2017/7/21 开始信息
 
     /**
      * 从ping的结果中提取末端节点ip地址

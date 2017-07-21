@@ -15,6 +15,7 @@ import android.widget.Toast;
 import com.wbp.traceroute3.adapter.TTLAdapter;
 import com.wbp.traceroute3.event.TTLInfoEvent;
 import com.wbp.traceroute3.event.TraceCompleteEvent;
+import com.wbp.traceroute3.event.TraceInfoEvent;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -32,6 +33,8 @@ public class MainActivity extends AppCompatActivity {
     Button btnStop;
     @BindView(R.id.progress)
     ProgressBar progressBar;
+    @BindView(R.id.tv_trace_info)
+    TextView tvTraceInfo;
     @BindView(R.id.recyclerView)
     RecyclerView mRecyclerView;
 
@@ -94,5 +97,10 @@ public class MainActivity extends AppCompatActivity {
     public void receiveTraceCompleteEvent(TraceCompleteEvent event) {
         Toast.makeText(this, "Completed!", Toast.LENGTH_SHORT).show();
         progressBar.setVisibility(View.GONE);
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void receiveTraceInfoEvent(TraceInfoEvent event) {
+        tvTraceInfo.setText(event.getHeader());
     }
 }
