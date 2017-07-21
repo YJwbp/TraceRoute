@@ -8,10 +8,13 @@ import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.wbp.traceroute3.adapter.TTLAdapter;
 import com.wbp.traceroute3.event.TTLInfoEvent;
+import com.wbp.traceroute3.event.TraceCompleteEvent;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -27,6 +30,8 @@ public class MainActivity extends AppCompatActivity {
     Button btnStart;
     @BindView(R.id.btn_stop)
     Button btnStop;
+    @BindView(R.id.progress)
+    ProgressBar progressBar;
     @BindView(R.id.recyclerView)
     RecyclerView mRecyclerView;
 
@@ -44,20 +49,29 @@ public class MainActivity extends AppCompatActivity {
         btnStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                TraceHandler.INSTANCE.url(etDomainName.getText().toString()).startTrace();
+                startTrace();
             }
         });
 
         btnStop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                TraceHandler.INSTANCE.stopTrace();
+                stopTrace();
             }
         });
     }
 
 
-    private void initViews(){
+    private void startTrace() {
+        progressBar.setVisibility(View.VISIBLE);
+        TraceHandler.INSTANCE.url(etDomainName.getText().toString()).startTrace();
+    }
+
+    private void stopTrace() {
+        TraceHandler.INSTANCE.stopTrace();
+    }
+
+    private void initViews() {
         LinearLayoutManager glm = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
         mRecyclerView.setLayoutManager(glm);
         mRecyclerView.setAdapter(ttlAdapter);
@@ -74,15 +88,11 @@ public class MainActivity extends AppCompatActivity {
     public void receiveTTLEvent(TTLInfoEvent event) {
         TTLInfo ttlInfo = event.getInfo();
         ttlAdapter.addOneTail(ttlInfo);
-//
-//        StringBuilder stringBuilder = new StringBuilder();
-//        stringBuilder.append("\n" + ttlInfo.getTtl() + "\n");
-//        for (PingInfo ping :
-//                ttlInfo.getPingInfoList()) {
-//            stringBuilder.append(ping.toString() + "\n");
-//        }
-//        stringBuilder.append("\n\n");
-//        tvTraces.setText(tvTraces.getText() + stringBuilder.toString());
     }
 
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void receiveTraceCompleteEvent(TraceCompleteEvent event) {
+        Toast.makeText(this, "Completed!", Toast.LENGTH_SHORT).show();
+        progressBar.setVisibility(View.GONE);
+    }
 }

@@ -5,6 +5,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.wbp.traceroute3.event.TTLInfoEvent;
+import com.wbp.traceroute3.event.TraceCompleteEvent;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -32,7 +33,7 @@ public enum TraceHandler {
     INSTANCE;
 
     private static final String TAG = "TraceHandler";
-
+    private String destIP = "";
     private String traceUrl = "www.baidu.com";
     private int pingRepeatTimes = 3;
     // 最大的ttl跳转 可以自己设定
@@ -76,15 +77,29 @@ public enum TraceHandler {
                     public void onNext(TTLInfo ttlInfo) {
                         Log.d(TAG, "onNext: " + ttlInfo);
                         EventBus.getDefault().post(new TTLInfoEvent(ttlInfo));
+                        checkTraceOver(ttlInfo);
                     }
                 }));
     }
 
 
+    private void checkTraceOver(TTLInfo info) {
+        StringBuilder sb = new StringBuilder("Check");
+        for (PingInfo pingInfo :
+                info.getPingInfoList()) {
+            sb.append(pingInfo.getIp());
+        }
+
+        if (!TextUtils.isEmpty(destIP) && sb.toString().contains(destIP)) {
+            stopTrace();
+        }
+    }
+
     public void stopTrace() {
         if (compositeSubscription != null) {
             compositeSubscription.clear();
         }
+        EventBus.getDefault().post(new TraceCompleteEvent());
     }
 
     private void addSubscription(Subscription subscription) {
@@ -146,10 +161,7 @@ public enum TraceHandler {
         if ((len = p.getErrorStream().available()) > 0) {
             byte[] buf = new byte[len];
             p.getErrorStream().read(buf);
-            Utils.log("\"Command error ttl:\\t\\\"\" + ttl + new String(buf) + \"\\\"\"");
             Utils.log("Command error " + new String(buf));
-            Log.d(TAG, "ping: " + "Command error " + new String(buf));
-            System.err.println("Command error ttl:\t\"" + ttl + new String(buf) + "\"");
         }
 
         BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
@@ -157,6 +169,7 @@ public enum TraceHandler {
         StringBuilder sbResult = new StringBuilder();
         while ((s = stdInput.readLine()) != null) {
             if (s.contains("PING")) {
+                destIP = parsePingResult(s);
                 pingInfo.setFirstLine(s);
                 continue;
             }
@@ -176,6 +189,10 @@ public enum TraceHandler {
         return pingInfo;
     }
 
+
+    // TODO: 2017/7/21 解析目的IP,判断跟踪结束
+    // TODO: 2017/7/21 host获取
+    // TODO: 2017/7/21 时间获取
 
     /**
      * 从ping的结果中提取末端节点ip地址
