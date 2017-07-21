@@ -35,7 +35,7 @@ public enum TraceHandler {
     private static final String TAG = "TraceHandler";
     private String destIP = "";
     private String traceUrl = "www.baidu.com";
-    private int pingRepeatTimes = 3;
+    private int pingRepeatTimes = 1;
     // 最大的ttl跳转 可以自己设定
     private static final int MAX_TTL = 30;
 
@@ -66,6 +66,7 @@ public enum TraceHandler {
                     @Override
                     public void onCompleted() {
                         Log.d(TAG, "onCompleted: ");
+                        stopTrace();
                     }
 
                     @Override
@@ -83,7 +84,7 @@ public enum TraceHandler {
     }
 
     private void prepareInfo() {
-        String res = ping("ping -c 1 " + traceUrl);
+        String res = ping("ping -c 1 -W 10 " + traceUrl);
         String subRes = res.substring(0, res.indexOf("\n"));
         if (subRes.contains("PING")) {
             destIP = parseDestIPFromPingResult(subRes);
@@ -150,14 +151,14 @@ public enum TraceHandler {
         // 1、执行ping命令,得到返回字符串
         // 这个实际上就是我们的命令第一封装 注意ttl的值的变化 第一次调用的时候 ttl的值为1
         // -c表示ping执行次数; -t 超时; -m ttl
-        String format = "ping -c 1 -t %d ";
+        String format = "ping -c 1 -W 10 -t %d ";
         String command = String.format(format, ttl);
 
         String pingResult = ping(command + traceUrl);
 
         String ip = parseNodeIPFromPingResult(pingResult);
         pingInfo.setIp(ip);
-        pingInfo.setTime(parseTimeFromPingResult(ping("ping -c 1 " + ip)));
+        pingInfo.setTime(parseTimeFromPingResult(ping("ping -c 1 -W 10 " + ip)));
         pingInfo.loadGeoByIP();
         return pingInfo;
     }
